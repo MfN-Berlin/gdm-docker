@@ -18,7 +18,7 @@ install:
 	docker build --rm --tag=liquibase:latest ./liquibase/
 	
 	# populate changelogs
-	make update 
+	make db-update 
 	
 	# build GDM Docker image
 	docker build --rm --tag=gdm:latest ./gdm/
