@@ -4,6 +4,7 @@ PWD = $(shell pwd)
 CHANGELOGS = $(CHANGELOGS)
 GDM_PORT = $(GDM_PORT)
 GDM_NAME = $(GDM_NAME)
+GDM_CONFIG_PATH = $(CONFIG_PATH)
 
 all:
 	@echo Usage: 
@@ -32,7 +33,7 @@ db-update:
 	
 	
 gdm-init:
-	docker run -d -p$(GDM_PORT):80 --restart=always --name=$(GDM_NAME) --hostname=$(GDM_NAME) --env "DB_NAME=$(DB_NAME)" --env "DB_HOST=$(DB_HOST)" --env "DB_PORT=$(DB_PORT)" --env "DB_HOST=$(DB_HOST)" --env "DB_USER=$(DB_USER)" --env "DB_PASSWORD=$(DB_PASSWORD)" gdm
+	docker run -d -p$(GDM_PORT):80 --restart=always -v $(GDM_CONFIG_PATH)/.env:/usr/share/app/.env --name=$(GDM_NAME) --hostname=$(GDM_NAME) --env "DB_NAME=$(DB_NAME)" --env "DB_HOST=$(DB_HOST)" --env "DB_PORT=$(DB_PORT)" --env "DB_HOST=$(DB_HOST)" --env "DB_USER=$(DB_USER)" --env "DB_PASSWORD=$(DB_PASSWORD)" gdm
 	
 	
 start:
