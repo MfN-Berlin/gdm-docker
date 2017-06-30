@@ -1,9 +1,8 @@
 FROM php:7.0-apache
 
-#enable mod_rewrite
-RUN a2enmod rewrite
+ENV GDM_VERSION=v0.1alpha
 
-#install some packages
+# install some packages
 RUN  \
      echo 'deb http://packages.dotdeb.org jessie all' >> /etc/apt/sources.list \
   && echo 'deb-src http://packages.dotdeb.org jessie all' >> /etc/apt/sources.list \
@@ -12,16 +11,19 @@ RUN  \
   && wget https://www.dotdeb.org/dotdeb.gpg \
   && apt-key add dotdeb.gpg 
 
-#install pdo_mysql
+# install pdo_mysql
 RUN \
      apt-get install -y --force-yes php7.0-mysql \
   && docker-php-ext-install pdo_mysql \
   && apt-get install -y --force-yes libapache2-mod-php7.0 \
   && apt-get install -y --force-yes zip unzip nano
 
-#install nodejs and npm
+# install nodejs and npm
 RUN curl -sL https://deb.nodesource.com/setup_7.x | bash -
 RUN apt-get -y install nodejs
+
+# clean-up
+RUN apt-get clean
 
 RUN echo prefix=~/.npm-packages >> ~/.npmrc && \
     curl -L https://www.npmjs.com/install.sh | sh && \
@@ -30,12 +32,9 @@ RUN echo prefix=~/.npm-packages >> ~/.npmrc && \
 RUN curl -sS https://getcomposer.org/installer | \
         php -- --install-dir=/usr/local/bin --filename=composer
 
-#create home directory 
+# create home directory 
 ENV GDM_HOME /usr/share/app
 RUN mkdir $GDM_HOME -p && cd $GDM_HOME/
-
-# provide a sample docker environment file
-COPY .env.docker $GDM_HOME/.env
 
 # install dependencies with composer
 RUN     cd / && cd $GDM_HOME && \
@@ -43,24 +42,18 @@ RUN     cd / && cd $GDM_HOME && \
         composer require ignasbernotas/laravel-model-generator --dev
 
 # download release file from public repository only
-#RUN cd $GDM_HOME && \
-#    curl -o gdm_latest.tgz https://code.naturkundemuseum.berlin/Thomas.Pfuhl/pmd/repository/archive.tar.gz?ref=master
-#
-# temporary alternative for download
-COPY gdm_latest.tgz /tmp/
+RUN cd $GDM_HOME && \
+    curl -L -o /tmp/gdm_$GDM_VERSION.tgz https://github.com/MfN-Berlin/gdm/archive/$GDM_VERSION.tar.gz
+
 RUN cd  /tmp && \
-    tar -xzf gdm_latest.tgz
+    tar -xzf gdm_$GDM_VERSION.tgz
 
 # The tar file comes with a parent directory that is named by the individual master version id. So it varies over time.
-# Thus, move all file (excluding hidden files) from the parent directory to $GDM_HOME and remove the parent dir that is left behind empty.
+# Thus, move all files (excluding hidden files) from the parent directory to $GDM_HOME and remove the parent dir that is left behind empty.
 RUN cd /tmp/ && \
-    mv $(find . -name "pmd-master-*")/* $GDM_HOME/ && \
-    rm -Rf $(find . -name "pmd-master-*")
+    mv $(find . -name "gdm-*")/* $GDM_HOME/ && \
+    rm -Rf $(find . -name "gdm-*")
 
-# copy customized about-file
-COPY about.html $GDM_HOME/public/appfiles/about.html
-
-#RUN cd $GDM_HOME &&  composer update 
 RUN cd $GDM_HOME &&  composer update --no-scripts
 # cf. http://stackoverflow.com/questions/43769756/composer-install-doesnt-install-packages-when-running-in-dockerfile
 
@@ -69,22 +62,41 @@ RUN cd $GDM_HOME && \
     cp lib/tools/model.stub  vendor/ignasbernotas/laravel-model-generator/src/stubs/model.stub && \
     cp lib/tools/MakeModelsCommand.php  vendor/ignasbernotas/laravel-model-generator/src/Commands/MakeModelsCommand.php
 
-#######################
-# liquibase
+	
+	
+VOLUME [ "/usr/share/app/custom" ]
 
-# install jre
-RUN apt-get install -y --force-yes default-jre 
+# avoid permission issues in the mounted volume by adding the user www-data to a docker group
+RUN groupadd -g 999 docker
+RUN usermod -a -G docker www-data
 
-# load environment variables
-# ISSUE !!!  ugly workaround, we should import them from the laravel environement file for shell variables
-ENV DB_CONNECTION   mysql
-ENV DB_HOST         $DB_HOST
-ENV DB_DATABASE     $DB_NAME
-ENV DB_USERNAME     $DB_USER
-ENV DB_PASSWORD     $DB_PASSWORD
+RUN chown -R www-data $GDM_HOME/
+RUN chown -R www-data /var/log/apache2/
 
 
-#make our own apache configuration, already defined in .env.docker    
+# link files from volume
+RUN ln -sf $GDM_HOME/custom/.env $GDM_HOME/.env && \
+	ln -sf $GDM_HOME/custom/about.html $GDM_HOME/public/appfiles/about.html && \
+	ln -sf $GDM_HOME/custom/sitename.txt $GDM_HOME/public/appfiles/sitename.txt && \
+	ln -sf $GDM_HOME/custom/custom.js $GDM_HOME/public/js/custom.js && \
+	ln -sf $GDM_HOME/custom/custom.css $GDM_HOME/public/css/custom.css
+	
+
+# execute database seeder
+RUN cd $GDM_HOME && \
+	composer dump-autoload && \
+	php artisan db:seed  
+
+	
+	
+## Apache config
+
+#enable mod_rewrite
+RUN a2enmod rewrite
+
+RUN cd $GDM_HOME && \
+    cp custom/000-default.conf /etc/apache2/sites-available/
+	
 ENV APACHE_RUN_USER www-data
 ENV APACHE_RUN_GROUP www-data
 ENV APACHE_LOG_DIR /var/log/apache2
@@ -92,21 +104,16 @@ ENV APACHE_PID_FILE /var/run/apache2.pid
 ENV APACHE_RUN_DIR /var/run/apache2
 ENV APACHE_LOCK_DIR /var/lock/apache2
 
+RUN mkdir -p $APACHE_RUN_DIR $APACHE_LOCK_DIR $APACHE_LOG_DIR
+	
+# link log files
 RUN ln -sf /dev/stdout /var/log/apache2/access.log && \
     ln -sf /dev/stderr /var/log/apache2/error.log
 
-RUN mkdir -p $APACHE_RUN_DIR $APACHE_LOCK_DIR $APACHE_LOG_DIR
-
-RUN cd $GDM_HOME && \
-    cp lib/tools/000-default.conf /etc/apache2/sites-available/
-
 WORKDIR $GDM_HOME/public
 
-RUN chown -R www-data $GDM_HOME/
-
 EXPOSE 80
-
-VOLUME [ "/usr/share/app/.env" ]
+EXPOSE 443
 
 ENTRYPOINT [ "/usr/sbin/apache2" ]
 CMD ["-D", "FOREGROUND"]
