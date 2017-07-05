@@ -1,6 +1,6 @@
 FROM php:7.0-apache
 
-ENV GDM_VERSION=v0.1alpha
+ENV GDM_VERSION=v0.3alpha
 
 # install some packages
 RUN  \
