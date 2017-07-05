@@ -17,13 +17,13 @@ falko.gloeckler@mfn-berlin.de
 ### Installation
 ```sh
 # build the Docker images, initiate the database with Liquibase and then start the GDM as daemon
-   make install CHANGELOGS="<your local changelogs>"
-```
+   make install DB_HOST="<your db hostname or IP>" DB_USER="<db user>" DB_NAME="<db schema name>" GDM_NAME="<docker container name for GDM>" GDM_CONFIG_PATH="<path to GDM config dir>" CHANGELOGS="<liquibase local changelogs>"
+  ```
 
 ### Data model update
 ```sh
 # run Liquibase to populate any changes of the data model
-   make db-update CHANGELOGS="<your local changelogs>"
+   make db-update CHANGELOGS="<liquibase local changelogs>"
 ```
 
 ### Service Controlling
