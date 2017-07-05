@@ -19,23 +19,29 @@ falko.gloeckler@mfn-berlin.de
 # build the Docker images, initiate the database with Liquibase and then start the GDM as daemon
    make install DB_HOST="<your db hostname or IP>" DB_USER="<db user>" DB_NAME="<db schema name>" GDM_NAME="<docker container name for GDM>" GDM_CONFIG_PATH="<path to GDM config dir>" CHANGELOGS="<liquibase local changelogs>"
   ```
+  
+### Roll-out another GDM instance
+```sh
+# build the Docker images, initiate the database with Liquibase and then start the GDM as daemon
+   make gdm-init DB_HOST="<your db hostname or IP>" DB_USER="<db user>" DB_NAME="<db schema name>" GDM_NAME="<docker container name for GDM>" GDM_PORT=<port for the GDM webapp> GDM_CONFIG_PATH="<path to GDM config dir>" CHANGELOGS="<liquibase local changelogs>"
+  ```
 
 ### Data model update
 ```sh
 # run Liquibase to populate any changes of the data model
-   make db-update CHANGELOGS="<liquibase local changelogs>"
+   make db-update DB_HOST="<your db hostname or IP>" DB_USER="<db user>" DB_NAME="<db schema name>" GDM_NAME="<docker container name for GDM>" GDM_PORT=<port for the webapp> CHANGELOGS="<liquibase local changelogs>"
 ```
 
 ### Service Controlling
 ```sh
 # Start the GDM service 
-   make start
+   make start GDM_NAME="<docker container name for GDM>" 
 
 # Stop the GDM service 
-   make stop
+   make stop GDM_NAME="<docker container name for GDM>" 
 
 # Restart the GDM service 
-   make restart
+   make restart GDM_NAME="<docker container name for GDM>" 
 ```
 
 ### Uninstallation
