@@ -1,15 +1,22 @@
 #!make
 
 # set default values if variable not passed as argument
-PWD = $(shell pwd)
-CHANGELOGS ?= $(value PWD)/liquibase/changelogs.xml
+PWD ?= 
+$(eval PWD := $(shell pwd))
+CHANGELOGS ?= $(value PWD)/liquibase/changelogs
 GDM_PORT ?= 80
 GDM_DATE ?= 
 $(eval GDM_DATE := $(shell date "+%Y%m%d"))
-GDM_TIME ?= 
-$(eval GDM_TIME := $(shell date "+%Y%m%d%T%N"))
 GDM_NAME ?= gdm_$(value GDM_DATE)
 $(eval GDM_CONFIG_PATH := $(value PWD)/gdm/)
+
+ifndef DB_PASSWORD
+$(eval DB_PASSWORD ?= $(shell bash -c 'read -s -p "Please enter the database password: " pwd; echo $$pwd'))
+endif
+
+ifndef DEBUG
+DEBUG := info
+endif
 
 DB_HOST ?= 
 DB_PORT ?= 
@@ -32,18 +39,29 @@ install:
 	docker build --rm --tag=liquibase:latest ./liquibase/
 	
 	# populate changelogs
-	make db-update
+	make db-update-test DB_PASSWORD=$(value DB_PASSWORD)
 	
 	# build GDM Docker image
 	docker build --rm --tag=gdm:latest ./gdm/
 	
 	# run GDM Docker container
-	make gdm-init GDM_NAME=$(GDM_NAME) GDM_CONFIG_PATH=$(GDM_CONFIG_PATH) DB_PASSWORD=$(DB_PASSWORD)
+	make gdm-init GDM_NAME=$(GDM_NAME) GDM_CONFIG_PATH=$(GDM_CONFIG_PATH) DB_PASSWORD=$(value DB_PASSWORD)
 
 	
 db-update:
-	@echo @TODO: run liquibase update from $(CHANGELOGS)
-	# docker run -it --volume=$(CHANGELOGS):/changelogs liquibase:latest
+	make db-check DB_PASSWORD=$(value DB_PASSWORD)
+	
+	@echo Run Liquibase for updating database from $(CHANGELOGS)
+	docker run --rm -it --volume=$(CHANGELOGS):/opt/liquibase/changelogs liquibase:latest --changeLogFile="/opt/liquibase/changelog.xml" --logLevel=$(value DEBUG) --username="$(DB_USER)" --password="$(value DB_PASSWORD)" --url="jdbc:mysql://$(DB_HOST)/$(DB_NAME)?useSSL=false" migrate
+	
+	# update the GDM's UI
+	docker exec -it $(GDM_NAME) bash -c 'cd $$GDM_HOME/lib/tools && php make_ui.php'
+	
+db-update-test:
+	make db-check DB_PASSWORD=$(value DB_PASSWORD)
+	
+	@echo Run Liquibase for updating database from $(CHANGELOGS)
+	docker run --rm -it --volume=$(CHANGELOGS):/opt/liquibase/changelogs liquibase:latest --changeLogFile="/opt/liquibase/changelog.xml" --logLevel=$(value DEBUG) --username="$(DB_USER)" --password="$(value DB_PASSWORD)" --url="jdbc:mysql://$(DB_HOST)/$(DB_NAME)?useSSL=false" updateSQL
 	
 	
 db-check:
@@ -63,19 +81,14 @@ endif
 ifeq ($(strip $(DB_USER)),)
    $(error DB_USER undefined!)
 endif
-
-ifndef DB_PASSWORD
-   # Set the timestamp as kind of hash value in order to allow comparisons needed for conditionally prompting for manually password entry.
-   DB_PASSWORD_CHECK:=$(value GDM_TIME)
-else
-   DB_PASSWORD_CHECK:=
-endif
 	
 gdm-init:
 	make db-check
 	
 	# run GDM Docker container as deamon
-	docker run -d -p$(value GDM_PORT):80 --restart=always -v $(value GDM_CONFIG_PATH)/:/usr/share/app/custom --name=$(value GDM_NAME) --hostname=$(value GDM_NAME) --env "DB_NAME=$(value DB_NAME)" --env="DB_HOST=$(value DB_HOST)" --env="DB_PORT=$(value DB_PORT)" --env="DB_HOST=$(value DB_HOST)" --env="DB_USER=$(value DB_USER)" --env="DB_PASSWORD=$(if $(filter %$(value GDM_TIME),$(value DB_PASSWORD_CHECK)),$(shell bash -c 'read -s -p "Please enter the database password: " pwd; echo $$pwd'),$(value DB_PASSWORD))" gdm
+	docker run -d -p$(value GDM_PORT):80 --restart=always -v $(value GDM_CONFIG_PATH)/:/usr/share/app/custom --name=$(value GDM_NAME) --hostname=$(value GDM_NAME) --env "DB_NAME=$(value DB_NAME)" --env="DB_HOST=$(value DB_HOST)" --env="DB_PORT=$(value DB_PORT)" --env="DB_HOST=$(value DB_HOST)" --env="DB_USER=$(value DB_USER)" gdm
+	
+	make db-update DB_PASSWORD=$(value DB_PASSWORD)
 	
 start:
 	docker start $(GDM_NAME)

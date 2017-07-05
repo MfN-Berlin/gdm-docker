@@ -1,6 +1,6 @@
 FROM php:7.0-apache
 
-ENV GDM_VERSION=v0.3alpha
+ENV GDM_VERSION=v0.2alpha
 
 # install some packages
 RUN  \
@@ -94,7 +94,8 @@ RUN cd $GDM_HOME && \
 #enable mod_rewrite
 RUN a2enmod rewrite
 
-RUN ln -sf $GDM_HOME/custom/000-default.conf /etc/apache2/sites-available/000-default.conf
+RUN cd $GDM_HOME && \
+    cp custom/000-default.conf /etc/apache2/sites-available/
 	
 ENV APACHE_RUN_USER www-data
 ENV APACHE_RUN_GROUP www-data
