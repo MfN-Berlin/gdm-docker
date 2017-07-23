@@ -82,7 +82,7 @@ db-check:
  ifeq ($(strip $(DB_USER)),)
    $(error DB_USER undefined!)
  endif
-	echo Database check OK!
+	# @echo Database check OK!
 	
 gdm-init:
 	make db-check
