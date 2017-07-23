@@ -29,7 +29,8 @@ help:
 	@echo Usage: 
 	# TODO provide short documentation
 	@echo "		make install"
-	@echo "		make update"
+	@echo "		make db-update-test"
+	@echo "		make db-update"
 	
 install: 
 	# prompt for password
@@ -66,21 +67,22 @@ db-update-test:
 	
 db-check:
 # check variables
-ifeq ($(strip $(DB_PORT)),)
-DB_PORT := 3306
-endif
+ ifeq ($(strip $(DB_PORT)),)
+ DB_PORT := 3306
+ endif
 
-ifeq ($(strip $(DB_HOST)),)
+ ifeq ($(strip $(DB_HOST)),)
    $(error DB_HOST undefined!)
-endif
+ endif
 
-ifeq ($(strip $(DB_NAME)),)
+ ifeq ($(strip $(DB_NAME)),)
    $(error DB_NAME undefined!)
-endif
+ endif
 
-ifeq ($(strip $(DB_USER)),)
+ ifeq ($(strip $(DB_USER)),)
    $(error DB_USER undefined!)
-endif
+ endif
+	echo Database check OK!
 	
 gdm-init:
 	make db-check
