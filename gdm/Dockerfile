@@ -1,6 +1,6 @@
 FROM php:7.0-apache
 
-ENV GDM_VERSION=v0.3alpha
+ENV GDM_VERSION=v0.5beta
 
 # install some packages
 RUN  \
@@ -33,20 +33,27 @@ RUN curl -sS https://getcomposer.org/installer | \
         php -- --install-dir=/usr/local/bin --filename=composer
 
 # create home directory 
-ENV GDM_HOME /usr/share/app
-RUN mkdir $GDM_HOME -p && cd $GDM_HOME/
+ENV GDM_HOME /usr/share/gdm
+RUN mkdir -p $GDM_HOME && cd $GDM_HOME/
 
 # install dependencies with composer
 RUN     cd / && cd $GDM_HOME && \
         composer require doctrine/dbal && \
         composer require ignasbernotas/laravel-model-generator --dev
+		
+RUN cd $GDM_HOME && \
+	npm install --save gulp-cli gulp 
+
 
 # download release file from public repository only
 RUN cd $GDM_HOME && \
     curl -L -o /tmp/gdm_$GDM_VERSION.tgz https://github.com/MfN-Berlin/gdm/archive/$GDM_VERSION.tar.gz
+# or alternatively use file that has been downloaded already
+	COPY gdm_$GDM_VERSION.tgz /tmp/gdm_$GDM_VERSION.tgz
+
 
 RUN cd  /tmp && \
-    tar -xzf gdm_$GDM_VERSION.tgz
+    tar -xvf gdm_$GDM_VERSION.tgz
 
 # The tar file comes with a parent directory that is named by the individual master version id. So it varies over time.
 # Thus, move all files (excluding hidden files) from the parent directory to $GDM_HOME and remove the parent dir that is left behind empty.
@@ -54,17 +61,23 @@ RUN cd /tmp/ && \
     mv $(find . -name "gdm-*")/* $GDM_HOME/ && \
     rm -Rf $(find . -name "gdm-*")
 
-RUN cd $GDM_HOME &&  composer update --no-scripts
+#RUN cd $GDM_HOME &&  composer update --no-scripts
 # cf. http://stackoverflow.com/questions/43769756/composer-install-doesnt-install-packages-when-running-in-dockerfile
 
 # copy customized model generator files
 RUN cd $GDM_HOME && \
     cp lib/tools/model.stub  vendor/ignasbernotas/laravel-model-generator/src/stubs/model.stub && \
-    cp lib/tools/MakeModelsCommand.php  vendor/ignasbernotas/laravel-model-generator/src/Commands/MakeModelsCommand.php
+    cp lib/tools/MakeModelsCommand.php vendor/ignasbernotas/laravel-model-generator/src/Commands/MakeModelsCommand.php
 
+
+
+RUN cd $GDM_HOME && \
+	composer dump-autoload  && \
+	composer install --no-scripts  && \
+	composer update --no-scripts 
 	
 	
-VOLUME [ "/usr/share/app/custom" ]
+VOLUME [ $GDM_HOME/custom ]
 
 # avoid permission issues in the mounted volume by adding the user www-data to a docker group
 RUN groupadd -g 999 docker
@@ -74,20 +87,39 @@ RUN chown -R www-data $GDM_HOME/
 RUN chown -R www-data /var/log/apache2/
 
 
-# link files from volume
-RUN ln -sf $GDM_HOME/custom/.env $GDM_HOME/.env && \
-	ln -sf $GDM_HOME/custom/about.html $GDM_HOME/public/appfiles/about.html && \
-	ln -sf $GDM_HOME/custom/sitename.txt $GDM_HOME/public/appfiles/sitename.txt && \
-	ln -sf $GDM_HOME/custom/custom.js $GDM_HOME/public/js/custom.js && \
-	ln -sf $GDM_HOME/custom/custom.css $GDM_HOME/public/css/custom.css
-	
+# execute database seeder/root/.npm-packages/lib/node_modules/gulp/bin/gulp.js
+#RUN cd $GDM_HOME && \
+#	gulp --production
 
-# execute database seeder
 RUN cd $GDM_HOME && \
 	composer dump-autoload && \
-	php artisan db:seed  
+	mkdir app/Models && \
+	chmod -R g+w app/Models && \
+	chmod -R g+w app/Http/Controllers && \
+	touch app/Http/routes_datamodel.php && \
+	chmod -R g+w app/Http/routes_datamodel.php && \
+	touch resources/views/partials/menu-items.blade.php && \
+	chmod -R g+w resources/views  && \
+	\
+	chgrp -R www-data app/Models && \
+	chgrp -R www-data app/Http/Controllers && \
+	chgrp -R www-data resources/views && \
+	chgrp  www-data app/Http/routes_datamodel.php
 
-	
+
+	# link files from volume
+RUN ln -sf $GDM_HOME/custom/.env $GDM_HOME/.env && \
+
+### needs correction in org GDM repo !!
+	ln -sf $GDM_HOME/custom/.env $GDM_HOME/lib/tools/.env && \
+	#mkdir public/appfiles && \
+	#touch public/appfiles/about.html
+	#ln -sf $GDM_HOME/custom/about.html $GDM_HOME/public/appfiles/about.html && \
+### obsolete ??
+#	ln -sf $GDM_HOME/custom/sitename.txt $GDM_HOME/public/appfiles/sitename.txt && \
+###
+	ln -sf $GDM_HOME/custom/custom.js $GDM_HOME/public/js/custom.js && \
+	ln -sf $GDM_HOME/custom/custom.css $GDM_HOME/public/css/custom.css
 	
 ## Apache config
 
@@ -109,7 +141,7 @@ RUN mkdir -p $APACHE_RUN_DIR $APACHE_LOCK_DIR $APACHE_LOG_DIR
 RUN ln -sf /dev/stdout /var/log/apache2/access.log && \
     ln -sf /dev/stderr /var/log/apache2/error.log
 
-WORKDIR $GDM_HOME/public
+WORKDIR $GDM_HOME
 
 EXPOSE 80
 EXPOSE 443
