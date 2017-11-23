@@ -30,7 +30,7 @@ RUN echo prefix=~/.npm-packages >> ~/.npmrc && \
     export PATH="$HOME/.npm-packages/bin:$PATH"
 
 RUN curl -sS https://getcomposer.org/installer | \
-        php -- --install-dir=/usr/local/bin --filename=composer
+    php -- --install-dir=/usr/local/bin --filename=composer
 
 # create home directory 
 ENV GDM_HOME /usr/share/gdm
@@ -46,10 +46,10 @@ RUN cd $GDM_HOME && \
 
 
 # download release file from public repository only
-RUN cd $GDM_HOME && \
-    curl -L -o /tmp/gdm_$GDM_VERSION.tgz https://github.com/MfN-Berlin/gdm/archive/$GDM_VERSION.tar.gz
+#RUN cd $GDM_HOME && \
+#    curl -L -o /tmp/gdm_$GDM_VERSION.tgz https://github.com/MfN-Berlin/gdm/archive/$GDM_VERSION.tar.gz
 # or alternatively use file that has been downloaded already
-	COPY gdm_$GDM_VERSION.tgz /tmp/gdm_$GDM_VERSION.tgz
+	COPY gdm_$GDM_VERSION.tgz   /tmp/gdm_$GDM_VERSION.tgz
 
 
 RUN cd  /tmp && \
@@ -61,14 +61,11 @@ RUN cd /tmp/ && \
     mv $(find . -name "gdm-*")/* $GDM_HOME/ && \
     rm -Rf $(find . -name "gdm-*")
 
-#RUN cd $GDM_HOME &&  composer update --no-scripts
-# cf. http://stackoverflow.com/questions/43769756/composer-install-doesnt-install-packages-when-running-in-dockerfile
 
 # copy customized model generator files
 RUN cd $GDM_HOME && \
     cp lib/tools/model.stub  vendor/ignasbernotas/laravel-model-generator/src/stubs/model.stub && \
     cp lib/tools/MakeModelsCommand.php vendor/ignasbernotas/laravel-model-generator/src/Commands/MakeModelsCommand.php
-
 
 
 RUN cd $GDM_HOME && \
@@ -93,12 +90,12 @@ RUN chown -R www-data /var/log/apache2/
 
 RUN cd $GDM_HOME && \
 	composer dump-autoload && \
-	mkdir app/Models && \
+	#mkdir app/Models && \
 	chmod -R g+w app/Models && \
 	chmod -R g+w app/Http/Controllers && \
-	touch app/Http/routes_datamodel.php && \
+	#touch app/Http/routes_datamodel.php && \
 	chmod -R g+w app/Http/routes_datamodel.php && \
-	touch resources/views/partials/menu-items.blade.php && \
+	#touch resources/views/partials/menu-items.blade.php && \
 	chmod -R g+w resources/views  && \
 	\
 	chgrp -R www-data app/Models && \
@@ -108,19 +105,9 @@ RUN cd $GDM_HOME && \
 
 
 	# link files from volume
-RUN ln -sf $GDM_HOME/custom/.env $GDM_HOME/.env && \
+RUN ln -sf $GDM_HOME/custom/.env $GDM_HOME/.env 
 
-### needs correction in org GDM repo !!
-	ln -sf $GDM_HOME/custom/.env $GDM_HOME/lib/tools/.env && \
-	#mkdir public/appfiles && \
-	#touch public/appfiles/about.html
-	#ln -sf $GDM_HOME/custom/about.html $GDM_HOME/public/appfiles/about.html && \
-### obsolete ??
-#	ln -sf $GDM_HOME/custom/sitename.txt $GDM_HOME/public/appfiles/sitename.txt && \
-###
-	ln -sf $GDM_HOME/custom/custom.js $GDM_HOME/public/js/custom.js && \
-	ln -sf $GDM_HOME/custom/custom.css $GDM_HOME/public/css/custom.css
-	
+
 ## Apache config
 
 #enable mod_rewrite
