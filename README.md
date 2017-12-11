@@ -3,7 +3,7 @@ falko.gloeckler@mfn-berlin.de
   
 
 ## Purpose
-* Deployment of the Generic Data Module (GDM) with Docker
+* Deployment of the [Generic Data Module (GDM)](https://github.com/MfN-Berlin/gdm) with Docker
 * For versioning the data model an additional Docker container for Liquibase (http://liquibase.org) is set up
 * The GDM container runs in daemon mode
 * The Liquibase container will only run temporarily for database updates
