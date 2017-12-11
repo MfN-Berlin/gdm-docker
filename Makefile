@@ -84,6 +84,7 @@ db-check:
  endif
 	# @echo Database check OK!
 	
+	
 gdm-init:
 	make db-check DB_PASSWORD=$(value DB_PASSWORD)
 	
