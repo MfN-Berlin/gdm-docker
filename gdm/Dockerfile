@@ -46,10 +46,10 @@ RUN cd $GDM_HOME && \
 
 
 # download release file from public repository only
-#RUN cd $GDM_HOME && \
-#    curl -L -o /tmp/gdm_$GDM_VERSION.tgz https://github.com/MfN-Berlin/gdm/archive/$GDM_VERSION.tar.gz
+RUN cd $GDM_HOME && \
+	curl -L -o /tmp/gdm_$GDM_VERSION.tgz https://github.com/MfN-Berlin/gdm/archive/$GDM_VERSION.tar.gz
 # or alternatively use file that has been downloaded already
-	COPY gdm_$GDM_VERSION.tgz   /tmp/gdm_$GDM_VERSION.tgz
+#	COPY gdm_$GDM_VERSION.tgz   /tmp/gdm_$GDM_VERSION.tgz
 
 
 RUN cd  /tmp && \
@@ -90,12 +90,9 @@ RUN chown -R www-data /var/log/apache2/
 
 RUN cd $GDM_HOME && \
 	composer dump-autoload && \
-	#mkdir app/Models && \
 	chmod -R g+w app/Models && \
 	chmod -R g+w app/Http/Controllers && \
-	#touch app/Http/routes_datamodel.php && \
 	chmod -R g+w app/Http/routes_datamodel.php && \
-	#touch resources/views/partials/menu-items.blade.php && \
 	chmod -R g+w resources/views  && \
 	\
 	chgrp -R www-data app/Models && \
@@ -104,11 +101,14 @@ RUN cd $GDM_HOME && \
 	chgrp  www-data app/Http/routes_datamodel.php
 
 
-	# link files from volume
+# link files from volume
 RUN ln -sf $GDM_HOME/custom/.env $GDM_HOME/.env 
 
 
 ## Apache config
+
+#disable apache2 service as it will be started separately
+RUN update-rc.d -f apache2 remove
 
 #enable mod_rewrite
 RUN a2enmod rewrite

@@ -57,8 +57,6 @@ db-update:
 	
 	# update the GDM's UI
 	make gdm-rebuild-ui GDM_NAME=$(GDM_NAME) GDM_CONFIG_PATH=$(GDM_CONFIG_PATH) 
-	#docker exec -it $(GDM_NAME) bash -c 'cd $$GDM_HOME/lib/tools && php make_ui.php'
-
 	
 db-update-test:
 	make db-check DB_PASSWORD=$(value DB_PASSWORD)
@@ -87,14 +85,10 @@ db-check:
 	# @echo Database check OK!
 	
 gdm-init:
-	make db-check
+	make db-check DB_PASSWORD=$(value DB_PASSWORD)
 	
 	# run GDM Docker container as deamon
 	docker run -d -p$(value GDM_PORT):80 --restart=always -v $(value GDM_CONFIG_PATH)/:/usr/share/gdm/custom --name=$(value GDM_NAME) --hostname=$(value GDM_NAME) --env "DB_NAME=$(value DB_NAME)" --env="DB_HOST=$(value DB_HOST)" --env="DB_PORT=$(value DB_PORT)" --env="DB_HOST=$(value DB_HOST)" --env="DB_USER=$(value DB_USER)" gdm
-	
-	
-	docker exec -it $(GDM_NAME) bash -c 'cd $$GDM_HOME/lib/tools && php customize.php'
-	
 	
 	# Create the tables needed by GDM
 	docker exec -i $(value GDM_NAME) bash -c 'php artisan migrate'
@@ -105,7 +99,7 @@ gdm-init:
 			composer dump-autoload && \
 			php artisan db:seed  \
 		'
-		
+	
 gdm-rebuild-ui:
 	docker exec -it $(value GDM_NAME) bash -c '  \
 			cd lib/tools && \
@@ -129,5 +123,3 @@ stop:
 	
 restart:
 	docker restart $(GDM_NAME)
-	
-	

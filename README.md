@@ -10,7 +10,7 @@ falko.gloeckler@mfn-berlin.de
 
 ## Requirements
 * Unix operating system (because not yet tested on Windows machines)
-* latest Docker engine intstallation 
+* latest Docker engine installation 
 * MySQL or Postgres database accessible for the GDM
 
 ## Usage
