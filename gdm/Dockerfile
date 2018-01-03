@@ -4,31 +4,29 @@ ENV GDM_VERSION=v0.5beta
 
 # install some packages
 RUN  \
-     echo 'deb http://packages.dotdeb.org jessie all' >> /etc/apt/sources.list \
-  && echo 'deb-src http://packages.dotdeb.org jessie all' >> /etc/apt/sources.list \
-  && apt-get update \
-  && apt-get install -y apt-utils wget \
+     echo 'deb http://packages.dotdeb.org stretch all' >> /etc/apt/sources.list \
+  && echo 'deb-src http://packages.dotdeb.org stretch all' >> /etc/apt/sources.list \
   && wget https://www.dotdeb.org/dotdeb.gpg \
-  && apt-key add dotdeb.gpg 
+  && apt-get update \
+  && apt-key add dotdeb.gpg \
+  && apt-get install -y apt-utils wget gnupg2 zip unzip nano\
 
 # install pdo_mysql
-RUN \
-     apt-get install -y --force-yes php7.0-mysql \
-  && docker-php-ext-install pdo_mysql \
-  && apt-get install -y --force-yes libapache2-mod-php7.0 \
-  && apt-get install -y --force-yes zip unzip nano
+RUN docker-php-ext-install pdo_mysql \
 
-# install nodejs and npm
+# install nodejs
 RUN curl -sL https://deb.nodesource.com/setup_7.x | bash -
 RUN apt-get -y install nodejs
 
 # clean-up
 RUN apt-get clean
 
+# install npm
 RUN echo prefix=~/.npm-packages >> ~/.npmrc && \
     curl -L https://www.npmjs.com/install.sh | sh && \
     export PATH="$HOME/.npm-packages/bin:$PATH"
 
+# install composer
 RUN curl -sS https://getcomposer.org/installer | \
     php -- --install-dir=/usr/local/bin --filename=composer
 
@@ -107,7 +105,7 @@ RUN ln -sf $GDM_HOME/custom/.env $GDM_HOME/.env
 
 ## Apache config
 
-#disable apache2 service as it will be started separately
+# disable apache2 service as it will be started separately
 RUN update-rc.d -f apache2 remove
 
 #enable mod_rewrite
